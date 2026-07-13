@@ -1,0 +1,106 @@
+{
+  "collections": {
+    "users": {
+      "id": "string",
+      "name": "string",
+      "user": "string",
+      "pass": "string",
+      "role": "string",
+      "status": "string",
+      "permissions": "map"
+    },
+    "clients": {
+      "id": "string",
+      "name": "string",
+      "document": "string",
+      "phone": "string",
+      "whatsapp": "string",
+      "email": "string",
+      "address": "string",
+      "createdAt": "timestamp"
+    },
+    "products": {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "price": "number",
+      "cost": "number",
+      "stock": "number",
+      "minStock": "number",
+      "category": "string",
+      "unit": "string",
+      "createdAt": "timestamp"
+    },
+    "services": {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "price": "number",
+      "duration": "string",
+      "category": "string",
+      "createdAt": "timestamp"
+    },
+    "budgets": {
+      "id": "string",
+      "clientId": "string",
+      "clientName": "string",
+      "items": "array",
+      "total": "number",
+      "status": "string",
+      "date": "timestamp",
+      "observations": "string",
+      "validity": "timestamp"
+    },
+    "orders": {
+      "id": "string",
+      "orderId": "string",
+      "budgetRef": "string",
+      "clientId": "string",
+      "status": "string",
+      "date": "timestamp",
+      "total": "number"
+    },
+    "finance": {
+      "id": "string",
+      "type": "string",
+      "category": "string",
+      "description": "string",
+      "amount": "number",
+      "date": "timestamp",
+      "status": "string",
+      "refId": "string"
+    },
+    "movements": {
+      "id": "string",
+      "productId": "string",
+      "type": "string",
+      "qty": "number",
+      "prevStock": "number",
+      "currentStock": "number",
+      "date": "timestamp",
+      "description": "string"
+    },
+    "categories": {
+      "id": "string",
+      "name": "string",
+      "type": "string"
+    },
+    "settings": {
+      "id": "string",
+      "companyName": "string",
+      "logo": "string",
+      "address": "string",
+      "phone": "string",
+      "whatsapp": "string",
+      "cnpj": "string",
+      "primaryColor": "string",
+      "theme": "string"
+    },
+    "counters": {
+      "id": "string",
+      "OS": "number",
+      "ORC: "number",
+      "PED": "number"
+    }
+  }
+}

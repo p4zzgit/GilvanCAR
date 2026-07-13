@@ -1,0 +1,8 @@
+{
+  "name": "Sistema de Gestão Pro",
+  "description": "Sistema completo de orçamentos, serviços, recibos e controle financeiro para autônomos e pequenas empresas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

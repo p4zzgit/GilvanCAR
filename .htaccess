@@ -1,0 +1,38 @@
+# Proteção de Segurança - Gestão Pro
+# Bloqueia o acesso direto a arquivos sensíveis e configurações
+
+# Impedir a listagem de arquivos nos diretórios
+Options -Indexes
+
+# Bloquear acesso a arquivos de configuração, bancos de dados e logs
+<FilesMatch "\.(sql|log|env|config\.php|json|lock|ts|config\.js|md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Bloquear acesso a arquivos ocultos (que começam com ponto)
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Permitir acesso apenas ao index.html (e ativos em subpastas)
+<Files "index.html">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</Files>
