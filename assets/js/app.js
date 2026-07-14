@@ -24,21 +24,23 @@ const ui = {
             document.body.style.pointerEvents = 'auto';
             document.documentElement.style.pointerEvents = 'auto';
             
+            this.startClock();
             this.setupEventListeners();
             console.log('Event listeners OK');
             this.applyTheme();
+            if (window.lucide) window.lucide.createIcons();
             
-            // Sincronização inicial
-            console.log('Iniciando Storage.init()...');
-            try {
-                await Storage.init();
-                console.log('Sincronização Storage OK');
-            } catch (storageErr) {
-                console.error('Erro no Storage.init():', storageErr);
-            }
+            // Sincronização inicial (Não-bloqueante para não travar a UI)
+            console.log('Iniciando Storage.init() em background...');
+            Storage.init().then(success => {
+                console.log('Sincronização Storage concluída:', success ? 'OK' : 'Falhou/Timeout');
+                this.renderAll(); 
+            }).catch(err => {
+                console.error('Erro crítico no Storage.init():', err);
+            });
 
+            // Renderizar após sync (ou fallback)
             this.renderAll();
-            console.log('Render All OK');
             this.handleRouting();
             console.log('Handle Routing OK');
             this.hideLoader();
@@ -49,7 +51,8 @@ const ui = {
             // Polling para garantir que cliques funcionem (agressivo contra overlays fantasmas)
             setInterval(() => {
                 const overlays = document.querySelectorAll('.modal:not(.hidden), .loader:not(.hidden)');
-                if (overlays.length === 0) {
+                const loginVisible = !document.getElementById('login-screen')?.classList.contains('hidden');
+                if (overlays.length === 0 || loginVisible) {
                     if (document.body.style.pointerEvents === 'none') {
                         document.body.style.pointerEvents = 'auto';
                         document.documentElement.style.pointerEvents = 'auto';
@@ -92,12 +95,32 @@ const ui = {
         Object.entries(forms).forEach(([id, handler]) => {
             const el = document.getElementById(id);
             if (el) {
-                el.onsubmit = (e) => {
-                    e.preventDefault();
-                    console.log('Form submetido:', id);
-                    handler(e);
+                console.log(`Anexando listener ao formulário: ${id}`);
+                // Usamos onsubmit para garantir que sobrescrevemos qualquer comportamento padrão
+                el.onsubmit = async (e) => {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    console.log('Form submetido (onsubmit):', id);
+                    try {
+                        await handler(e);
+                    } catch (err) {
+                        console.error(`Erro crítico no handler do form ${id}:`, err);
+                    }
                     return false;
                 };
+                
+                // Backup com addEventListener
+                el.addEventListener('submit', (e) => {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    return false;
+                }, { passive: false });
+            } else {
+                console.warn(`Formulário não encontrado: ${id}`);
             }
         });
 
@@ -179,6 +202,13 @@ const ui = {
             };
         }
 
+        // Close modal on background click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0') && e.target.id && e.target.id.startsWith('modal-')) {
+                this.closeModal(e.target.id);
+            }
+        });
+
         // Close sidebar on mobile navigation
         document.addEventListener('click', (e) => {
             const navLink = e.target.closest('.nav-link') || e.target.closest('.mobile-nav-link');
@@ -213,7 +243,7 @@ const ui = {
     },
 
     checkAuth() {
-        return !!localStorage.getItem(Storage.KEYS.AUTH);
+        try { return !!localStorage.getItem(Storage.KEYS.AUTH); } catch(e) { return !!(window._memStore || {})[Storage.KEYS.AUTH]; }
     },
 
     cleanMoney(val) {
@@ -233,8 +263,8 @@ const ui = {
         if (appShell) appShell.classList.add('hidden');
 
         // Auto-populate remembered login
-        const remUser = localStorage.getItem('remember_me_user');
-        const remPass = localStorage.getItem('remember_me_pass');
+        let remUser = null; try { remUser = localStorage.getItem('remember_me_user'); } catch(e) {}
+        let remPass = null; try { remPass = localStorage.getItem('remember_me_pass'); } catch(e) {}
         const userEl = document.getElementById('login-user');
         const passEl = document.getElementById('login-pass');
         const remCheckbox = document.getElementById('login-remember');
@@ -245,19 +275,31 @@ const ui = {
     },
 
     async login(e) {
-        if (e) e.preventDefault();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
         console.log('Tentando login...');
         
         const userEl = document.getElementById('login-user');
         const passEl = document.getElementById('login-pass');
         const btn = document.querySelector('#form-login button[type="submit"]') || document.querySelector('#form-login button');
         
-        if (!userEl || !passEl) return;
+        if (!userEl || !passEl) {
+            console.error('Elementos do formulário de login não encontrados');
+            return false;
+        }
 
         const user = userEl.value.trim();
         const pass = passEl.value.trim();
         const remember = document.getElementById('login-remember') ? document.getElementById('login-remember').checked : false;
         
+        if (!user || !pass) {
+            alert('Por favor, preencha todos os campos.');
+            return false;
+        }
+
         if (btn) {
             btn.disabled = true;
             btn.dataset.oldText = btn.innerHTML;
@@ -266,40 +308,83 @@ const ui = {
         }
 
         try {
-            await new Promise(r => setTimeout(r, 400));
-            const users = Storage.getUsers();
-            const found = users.find(u => (u.user === user || u.email === user) && u.pass === pass);
+            console.log('Dados do form:', { user, remember });
+            
+            // Brute force protection
+            this.loginAttempts = (this.loginAttempts || 0) + 1;
+            if (this.loginAttempts > 10) { // Aumentado para facilitar testes
+                const now = Date.now();
+                if (this.lastAttempt && (now - this.lastAttempt < 30000)) {
+                    console.error('Muitas tentativas de login');
+                    alert('Muitas tentativas. Aguarde 30 segundos.');
+                    return false;
+                }
+                this.loginAttempts = 0;
+            }
+            this.lastAttempt = Date.now();
+
+            // Pequeno delay para efeito visual e garantir que o storage esteja pronto
+            await new Promise(r => setTimeout(r, 600));
+            
+            let found = null;
+            
+            // Prioridade ABSOLUTA para o fallback Admin (Segurança e Recuperação)
+            if (user.toLowerCase() === 'admin' && pass === 'admin') {
+                console.log('DETECTADO: Fallback Manual admin/admin ativado');
+                found = Storage.getDefaultUsers()[0];
+            } else {
+                const users = Storage.getUsers();
+                console.log('Usuários carregados para verificação:', users.length);
+                found = users.find(u => (u.user === user || u.email === user) && u.pass === pass);
+            }
+            
+            console.log('Resultado da busca de usuário:', found ? 'Encontrado' : 'Não encontrado');
             
             if (found) {
-                console.log('Login OK:', found.name);
-                localStorage.setItem(Storage.KEYS.AUTH, JSON.stringify(found));
+                console.log('Login bem sucedido para:', found.name);
+                
+                // Salvar autenticação ANTES de qualquer redirecionamento
+                try { localStorage.setItem(Storage.KEYS.AUTH, JSON.stringify(found)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[Storage.KEYS.AUTH] = JSON.stringify(found); }
                 
                 if (remember) {
-                    localStorage.setItem('remember_me_user', user);
-                    localStorage.setItem('remember_me_pass', pass);
+                    try { localStorage.setItem('remember_me_user', user); } catch(e) {}
+                    try { localStorage.setItem('remember_me_pass', pass); } catch(e) {}
                 } else {
-                    localStorage.removeItem('remember_me_user');
-                    localStorage.removeItem('remember_me_pass');
+                    try { localStorage.removeItem('remember_me_user'); } catch(e) {}
+                    try { localStorage.removeItem('remember_me_pass'); } catch(e) {}
                 }
 
-                document.getElementById('login-screen').classList.add('hidden');
-                const shell = document.getElementById('app-shell');
-                if (shell) {
-                    shell.classList.remove('hidden');
-                    shell.style.display = 'flex';
+                // Esconder login e mostrar app
+                const loginScreen = document.getElementById('login-screen');
+                const appShell = document.getElementById('app-shell');
+                
+                if (loginScreen) loginScreen.classList.add('hidden');
+                if (appShell) {
+                    appShell.classList.remove('hidden');
+                    appShell.style.display = 'flex';
                 }
                 
+                // Limpar campos
                 userEl.value = '';
                 passEl.value = '';
                 
+                // Forçar renderização e navegação
+                this.renderAll();
+                
+                // Usar hash para navegação sem recarregar a página
                 window.location.hash = '#dashboard';
                 this.handleRouting();
+                
+                return true;
             } else {
+                console.warn('Credenciais inválidas');
                 alert('Usuário ou senha incorretos. Tente admin / admin');
+                return false;
             }
         } catch (err) {
-            console.error('Erro login:', err);
-            alert('Erro ao processar login.');
+            console.error('Erro fatal no processo de login:', err);
+            alert('Erro técnico ao processar login. Verifique sua conexão.');
+            return false;
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -310,7 +395,7 @@ const ui = {
     },
 
     logout() {
-        localStorage.removeItem(Storage.KEYS.AUTH);
+        try { localStorage.removeItem(Storage.KEYS.AUTH); } catch(e) { if(window._memStore) delete window._memStore[Storage.KEYS.AUTH]; }
         window.location.hash = '#login';
         window.location.reload();
     },
@@ -1307,6 +1392,7 @@ const ui = {
         // Aplicar Cor Principal
         if (settings.primaryColor) {
             document.documentElement.style.setProperty('--brand', settings.primaryColor);
+            document.documentElement.style.setProperty('--brand-hover', settings.primaryColor);
         }
 
         // Favicon e Título da Aba
@@ -3350,6 +3436,9 @@ const ui = {
         const settings = Storage.getSettings();
         const companyNames = settings.companyName || 'Gestão Pro';
         
+        // Atualizar tema e cores
+        this.applyTheme();
+        
         // Update document title
         if (settings.tabTitle) {
             document.title = settings.tabTitle;
@@ -3367,11 +3456,21 @@ const ui = {
         
         const navCompName = document.getElementById('company-name-nav');
         if (navCompName) navCompName.innerText = companyNames;
+
+        const loginCompName = document.getElementById('login-company-name');
+        if (loginCompName) loginCompName.innerText = companyNames;
+
+        // Iniciais para placeholders
+        const initials = companyNames.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        const headerPlaceholder = document.getElementById('header-logo-placeholder');
+        if (headerPlaceholder) headerPlaceholder.innerText = initials;
         
         // Update Logos everywhere
         const logoUrl = settings.logo;
         const logoImgs = [
             'sidebar-logo',
+            'header-logo',
+            'login-logo',
             'view-company-logo',
             'store-logo',
             'print-logo'
@@ -3379,6 +3478,8 @@ const ui = {
 
         const logoPlaceholders = [
             'sidebar-logo-icon-container',
+            'header-logo-placeholder',
+            'login-logo-placeholder',
             'store-logo-placeholder'
         ];
 
@@ -3419,14 +3520,40 @@ const ui = {
         }
 
         // Se estiver em uma aba específica, recarregar seu conteúdo
-        if (this.currentTab) {
-            this.setTab(this.currentTab);
-        } else {
-            this.setTab('dashboard');
+        if (this.checkAuth()) {
+            if (this.currentTab) {
+                this.setTab(this.currentTab);
+            } else {
+                this.setTab('dashboard');
+            }
         }
     },
 
+    startClock() {
+        const updateClock = () => {
+            const el = document.getElementById('current-date-time');
+            if (!el) return;
 
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long',
+                year: 'numeric'
+            });
+            const timeStr = now.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+
+            // Capitalize weekday
+            const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            el.innerText = `${capitalizedDate} • ${timeStr}`;
+        };
+
+        updateClock();
+        setInterval(updateClock, 1000 * 60); // Atualiza a cada minuto
+    },
 
     loadLinkVendas() {
         const settings = Storage.getSettings();

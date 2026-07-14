@@ -99,7 +99,7 @@
     "counters": {
       "id": "string",
       "OS": "number",
-      "ORC: "number",
+      "ORC": "number",
       "PED": "number"
     }
   }

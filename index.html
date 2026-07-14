@@ -18,10 +18,53 @@
                 document.documentElement.setAttribute('data-theme', theme);
                 if (theme === 'dark') document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
+                
+                // Aplicar cor de marca se existir
+                if (settings.primaryColor) {
+                    document.documentElement.style.setProperty('--brand', settings.primaryColor);
+                }
             } catch (e) {
                 console.error('Erro ao aplicar tema inicial:', e);
             }
         })();
+
+        // Verificação rápida de autenticação para evitar flash de conteúdo privado
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash || '#dashboard';
+            const isPublicPage = hash.startsWith('#loja') || hash.startsWith('#orcamento/');
+            const isAuthenticated = (() => { try { return !!localStorage.getItem('gestao_pro_auth'); } catch(e) { return false; } })();
+            const loader = document.getElementById('public-loader');
+            const appShell = document.getElementById('app-shell');
+            const loginScreen = document.getElementById('login-screen');
+
+            console.log('Initial Auth Check:', { hash, isPublicPage, isAuthenticated });
+
+            if (isPublicPage) {
+                if (appShell) appShell.classList.add('hidden');
+                if (loginScreen) loginScreen.classList.add('hidden');
+                // Loader remains until app.js hides it
+            } else if (!isAuthenticated) {
+                if (appShell) {
+                    appShell.classList.add('hidden');
+                    appShell.style.display = 'none';
+                }
+                if (loginScreen) {
+                    loginScreen.classList.remove('hidden');
+                    loginScreen.style.display = 'flex';
+                }
+                if (loader) loader.classList.add('hidden');
+            } else {
+                if (appShell) {
+                    appShell.classList.remove('hidden');
+                    appShell.style.display = 'flex';
+                }
+                if (loginScreen) {
+                    loginScreen.classList.add('hidden');
+                    loginScreen.style.display = 'none';
+                }
+                // Loader remains until app.js hides it
+            }
+        });
     </script>
 
     <!-- Chart.js -->
@@ -39,6 +82,8 @@
             --bg-main: #030712;
             --bg-side: #111827;
             --bg-card: #111827;
+            --bg-alt: #1F2937;
+            --bg-card-alt: rgba(31, 41, 55, 0.5);
             --text-main: #F9FAFB;
             --text-sub: #9CA3AF;
             --border-main: #1F2937;
@@ -53,6 +98,8 @@
             --bg-main: #F3F4F6;
             --bg-side: #FFFFFF;
             --bg-card: #FFFFFF;
+            --bg-alt: #E5E7EB;
+            --bg-card-alt: #F9FAFB;
             --text-main: #0F172A;
             --text-sub: #475569;
             --border-main: #E2E8F0;
@@ -60,19 +107,38 @@
         }
 
         /* Brand Colors Overrides */
-        .bg-blue-600, .bg-blue-500, .bg-indigo-600, .bg-purple-600, .bg-\[\#2563EB\], .bg-\[\#3b82f6\], .bg-\[\#2563eb\] {
+        .bg-[var(--brand)], .bg-[var(--brand)], .bg-indigo-600, .bg-purple-600, .bg-\[\#2563EB\], .bg-\[\#3b82f6\], .bg-\[\#2563eb\], .bg-blue-700, .bg-indigo-700, .bg-purple-700 {
             background-color: var(--brand) !important;
             color: #FFFFFF !important;
         }
 
-        .bg-green-600, .bg-green-500 {
-            background-color: #16a34a !important;
-            color: #FFFFFF !important;
+        .bg-blue-50, .bg-indigo-50, .bg-purple-50 {
+            background-color: rgba(37, 99, 235, 0.1) !important;
+        }
+        .dark .bg-blue-900\/20, .dark .bg-blue-900\/10 {
+            background-color: rgba(37, 99, 235, 0.2) !important;
+        }
+
+        .text-[var(--brand)], .text-[var(--brand)], .text-indigo-600, .text-purple-600, .text-\[\#2563EB\], .text-blue-700 {
+            color: var(--brand) !important;
+        }
+
+        .border-[var(--brand)], .border-blue-500, .border-indigo-600, .border-purple-600, .border-blue-200, .border-blue-100 {
+            border-color: var(--brand) !important;
+        }
+
+        .focus\:ring-blue-500, .focus\:ring-indigo-500, .focus\:ring-purple-500, .focus\:ring-\[\#2563EB\] {
+            --tw-ring-color: var(--brand) !important;
+            border-color: var(--brand) !important;
+        }
+
+        .shadow-blue-500\/20, .shadow-blue-500\/30, .shadow-blue-500\/10 {
+            --tw-shadow-color: rgba(37, 99, 235, 0.3) !important;
         }
 
         /* Ensure all buttons with brand background and their children (text, icons) use white color */
-        button.bg-blue-600, 
-        button.bg-blue-500, 
+        button.bg-[var(--brand)], 
+        button.bg-[var(--brand)], 
         button.bg-green-600, 
         button.bg-green-500,
         button.bg-indigo-600,
@@ -80,8 +146,8 @@
             color: #FFFFFF !important;
         }
 
-        button.bg-blue-600 *, 
-        button.bg-blue-500 *, 
+        button.bg-[var(--brand)] *, 
+        button.bg-[var(--brand)] *, 
         button.bg-green-600 *, 
         button.bg-green-500 *,
         button.bg-indigo-600 *,
@@ -102,6 +168,10 @@
         button:active, .nav-item:active, .mobile-nav-link:active, a.active\:scale-95:active {
             transform: scale(0.95) !important;
             opacity: 0.8;
+        }
+
+        a i, a svg {
+            color: currentColor !important;
         }
 
         /* Garantir que telas críticas sejam clicáveis */
@@ -191,13 +261,13 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             transition: all 0.2s;
         }
-        .badge-vivid-blue { background: #eff6ff; color: #2563eb; }
+        .badge-vivid-blue { background: rgba(37, 99, 235, 0.1); color: var(--brand); }
         .dark .badge-vivid-blue { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
-        .badge-vivid-green { background: #f0fdf4; color: #16a34a; }
+        .badge-vivid-green { background: rgba(22, 163, 74, 0.1); color: #16a34a; }
         .dark .badge-vivid-green { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
-        .badge-vivid-red { background: #fef2f2; color: #dc2626; }
+        .badge-vivid-red { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
         .dark .badge-vivid-red { background: rgba(220, 38, 38, 0.2); color: #f87171; }
-        .badge-vivid-yellow { background: #fffbeb; color: #d97706; }
+        .badge-vivid-yellow { background: rgba(217, 119, 6, 0.1); color: #d97706; }
         .dark .badge-vivid-yellow { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
         
         /* Seletor de Tema Lateral */
@@ -244,15 +314,15 @@
             color: var(--text-main);
         }
         
-        .hover\:bg-blue-700:hover, .hover\:bg-blue-600:hover, .hover\:bg-indigo-700:hover, .hover\:bg-purple-700:hover, .hover\:bg-\[\#1D4ED8\]:hover {
+        .hover\:bg-blue-700:hover, .hover\:bg-[var(--brand)]:hover, .hover\:bg-indigo-700:hover, .hover\:bg-purple-700:hover, .hover\:bg-\[\#1D4ED8\]:hover {
             background-color: var(--brand-hover) !important;
         }
         
-        .text-blue-600, .text-blue-500, .text-indigo-600, .text-purple-600, .text-\[\#2563EB\] {
+        .text-[var(--brand)], .text-[var(--brand)], .text-indigo-600, .text-purple-600, .text-\[\#2563EB\] {
             color: var(--brand) !important;
         }
 
-        .border-blue-600, .border-blue-500, .border-indigo-600, .border-purple-600, .focus\:ring-blue-500:focus, .focus\:ring-\[\#2563EB\]:focus {
+        .border-[var(--brand)], .border-blue-500, .border-indigo-600, .border-purple-600, .focus\:ring-blue-500:focus, .focus\:ring-\[\#2563EB\]:focus {
             border-color: var(--brand) !important;
             --tw-ring-color: var(--brand) !important;
         }
@@ -500,10 +570,10 @@
             scrollbar-width: none;
         }
         .mobile-nav-link.active {
-            color: #2563eb !important;
+            color: var(--brand) !important;
         }
         .dark .mobile-nav-link.active {
-            color: #60a5fa !important;
+            color: var(--brand) !important;
         }
         .safe-area-bottom {
             padding-bottom: env(safe-area-inset-bottom, 12px);
@@ -511,14 +581,14 @@
     </style>
 </head>
 <body class="transition-colors duration-200" id="body">
-    <div id="app-shell" class="flex h-screen overflow-hidden bg-[var(--bg-main)]">
+    <div id="app-shell" class="flex h-screen overflow-hidden bg-[var(--bg-main)] hidden">
         <!-- Sidebar -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[220px] transition-transform duration-300 transform md:relative md:translate-x-0 -translate-x-full flex flex-col py-6 border-r">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[220px] transition-transform duration-300 transform md:relative md:translate-x-0 -translate-x-full flex flex-col py-6 border-r bg-[var(--bg-side)] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
             <div class="px-6 mb-8 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="company-logo-container flex items-center justify-center">
                         <img id="sidebar-logo" src="" class="max-w-[48px] max-h-[48px] object-contain hidden" style="background: transparent !important; border: none !important; box-shadow: none !important;">
-                        <div id="sidebar-logo-icon-container" class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <div id="sidebar-logo-icon-container" class="w-8 h-8 bg-[var(--brand)] rounded-lg flex items-center justify-center">
                             <i id="sidebar-logo-icon" data-lucide="briefcase" class="w-5 h-5 text-white"></i>
                         </div>
                     </div>
@@ -532,7 +602,7 @@
             </div>
 
             <!-- Theme Selector -->
-            <div class="mb-6 mx-4 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl flex gap-1">
+            <div class="mb-6 mx-4 p-1 bg-[var(--input-bg)] border border-[var(--border-main)] rounded-xl flex gap-1">
                 <button onclick="ui.setTheme('light')" id="sidebar-theme-light" class="theme-toggle-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest">
                     <i data-lucide="sun" class="w-3.5 h-3.5"></i> Claro
                 </button>
@@ -617,64 +687,65 @@
                 <div class="flex items-center gap-3 md:gap-4">
                     <div class="hidden sm:flex flex-col items-end">
                         <span class="text-sm font-semibold text-gray-900 dark:text-white" id="header-company-name">Minha Empresa</span>
-                        <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider" id="current-date">Sábado, 11 de Julho</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest" id="current-date-time">Sábado, 11 de Julho • 00:00</span>
                     </div>
-                    <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs shadow-sm shadow-blue-500/10">
-                        AS
+                    <div class="header-logo-container w-10 h-10 rounded-xl bg-[var(--bg-alt)] border border-[var(--border-main)] flex items-center justify-center overflow-hidden">
+                        <img id="header-logo" src="" class="w-full h-full object-contain hidden">
+                        <div id="header-logo-placeholder" class="text-[var(--brand)] font-black text-xs">GP</div>
                     </div>
                 </div>
             </header>
 
             <!-- Page Container -->
-            <div id="page-container" class="flex-1 overflow-y-auto p-4 md:p-8 dark:bg-gray-950 pb-24 md:pb-8">
+            <div id="page-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--bg-main)] pb-24 md:pb-8">
                 <!-- Dashboard Page -->
                 <section id="dashboard" class="page active">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        <div class="stat-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
+                        <div class="stat-card bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
                             <div class="flex justify-between items-start">
-                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Faturamento Mensal</span>
-                                <button onclick="ui.setTab('financeiro')" class="text-[10px] text-blue-600 font-bold hover:underline">Ver Todos</button>
+                                <span class="text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-widest">Faturamento Mensal</span>
+                                <button onclick="ui.setTab('financeiro')" class="text-[10px] text-[var(--brand)] font-bold hover:underline">Ver Todos</button>
                             </div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-2xl font-black text-gray-900 dark:text-white" id="dash-billing">R$ 0,00</span>
+                                <span class="text-2xl font-black text-[var(--text-main)]" id="dash-billing">R$ 0,00</span>
                                 <span class="text-[10px] font-bold hidden" id="dash-billing-trend">0%</span>
                             </div>
-                            <div class="h-1 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2">
-                                <div id="dash-billing-progress" class="h-full bg-blue-600 transition-all duration-500" style="width: 0%"></div>
+                            <div class="h-1 w-full bg-[var(--bg-alt)] rounded-full overflow-hidden mt-2">
+                                <div id="dash-billing-progress" class="h-full bg-[var(--brand)] transition-all duration-500" style="width: 0%"></div>
                             </div>
                         </div>
-                        <div class="stat-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
+                        <div class="stat-card bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
                             <div class="flex justify-between items-start">
-                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Orçamentos Pendentes</span>
-                                <button onclick="ui.setTab('orcamentos')" class="text-[10px] text-blue-600 font-bold hover:underline">Ver Todos</button>
+                                <span class="text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-widest">Orçamentos Pendentes</span>
+                                <button onclick="ui.setTab('orcamentos')" class="text-[10px] text-[var(--brand)] font-bold hover:underline">Ver Todos</button>
                             </div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-2xl font-black text-gray-900 dark:text-white" id="dash-budgets">0</span>
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-tighter">ativos</span>
+                                <span class="text-2xl font-black text-[var(--text-main)]" id="dash-budgets">0</span>
+                                <span class="text-[11px] text-[var(--text-sub)] font-bold uppercase tracking-tighter">ativos</span>
                             </div>
-                            <div class="h-1 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2">
+                            <div class="h-1 w-full bg-[var(--bg-alt)] rounded-full overflow-hidden mt-2">
                                 <div id="dash-budgets-progress" class="h-full bg-yellow-500 transition-all duration-500" style="width: 0%"></div>
                             </div>
                         </div>
-                        <div class="stat-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
+                        <div class="stat-card bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
                             <div class="flex justify-between items-start">
-                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Clientes Ativos</span>
-                                <button onclick="ui.setTab('clientes')" class="text-[10px] text-blue-600 font-bold hover:underline">Ver Todos</button>
+                                <span class="text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-widest">Clientes Ativos</span>
+                                <button onclick="ui.setTab('clientes')" class="text-[10px] text-[var(--brand)] font-bold hover:underline">Ver Todos</button>
                             </div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-2xl font-black text-gray-900 dark:text-white" id="dash-clients">0</span>
+                                <span class="text-2xl font-black text-[var(--text-main)]" id="dash-clients">0</span>
                             </div>
-                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">base local</span>
+                            <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase tracking-widest mt-2">base local</span>
                         </div>
-                        <div class="stat-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
+                        <div class="stat-card bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl p-4 flex flex-col justify-between min-h-[112px] transition-all">
                             <div class="flex justify-between items-start">
-                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Serviços Concluídos</span>
-                                <button onclick="ui.setTab('servicos')" class="text-[10px] text-blue-600 font-bold hover:underline">Ver Todos</button>
+                                <span class="text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-widest">Serviços Concluídos</span>
+                                <button onclick="ui.setTab('servicos')" class="text-[10px] text-[var(--brand)] font-bold hover:underline">Ver Todos</button>
                             </div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-2xl font-black text-gray-900 dark:text-white" id="dash-services">0</span>
+                                <span class="text-2xl font-black text-[var(--text-main)]" id="dash-services">0</span>
                             </div>
-                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">este mês</span>
+                            <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase tracking-widest mt-2">este mês</span>
                         </div>
                     </div>
 
@@ -688,7 +759,7 @@
                         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl flex flex-col overflow-hidden">
                             <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
                                 <h3 class="font-bold text-sm text-gray-900 dark:text-white">Últimos Serviços</h3>
-                                <button onclick="ui.setTab('servicos')" class="text-[11px] text-blue-600 font-semibold hover:underline">Ver Todos</button>
+                                <button onclick="ui.setTab('servicos')" class="text-[11px] text-[var(--brand)] font-semibold hover:underline">Ver Todos</button>
                             </div>
                             <div class="flex-1 overflow-y-auto" id="recent-services-list">
                                 <p class="p-6 text-xs text-gray-500 italic">Nenhum serviço recente.</p>
@@ -706,12 +777,12 @@
                         </div>
                     </div>
                     
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-x-auto overflow-y-hidden">
                         <div class="p-6 border-b border-gray-100 dark:border-gray-800">
                             <div class="flex gap-4">
                                 <div class="relative flex-1">
                                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                                    <input type="text" id="search-clients" onkeyup="ui.filterClients(this.value)" placeholder="Pesquisar por nome, CPF/CNPJ ou WhatsApp..." class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                                    <input type="text" id="search-clients" onkeyup="ui.filterClients(this.value)" placeholder="Pesquisar por nome, CPF/CNPJ ou WhatsApp..." class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                                 </div>
                             </div>
                         </div>
@@ -735,7 +806,7 @@
                             <h2 class="text-2xl font-bold dark:text-white">Agenda</h2>
                             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">Gestão de horários e compromissos</p>
                         </div>
-                        <button onclick="ui.openModal('modal-agenda')" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                        <button onclick="ui.openModal('modal-agenda')" class="w-full md:w-auto bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-[var(--brand)]/20 active:scale-95">
                             <i data-lucide="plus" class="w-4 h-4"></i> Novo Agendamento
                         </button>
                     </div>
@@ -804,7 +875,7 @@
                             <h2 class="text-2xl font-bold dark:text-white">Serviços</h2>
                             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">Catálogo de prestação</p>
                         </div>
-                        <button onclick="ui.openModal('modal-servico')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
+                        <button onclick="ui.openModal('modal-servico')" class="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
                             <i data-lucide="plus" class="w-4 h-4"></i> Novo Serviço
                         </button>
                     </div>
@@ -822,15 +893,15 @@
                             <button onclick="ui.openModal('modal-categoria')" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
                                 <i data-lucide="tag" class="w-4 h-4"></i> Nova Categoria
                             </button>
-                            <button onclick="ui.openModal('modal-produto')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
+                            <button onclick="ui.openModal('modal-produto')" class="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
                                 <i data-lucide="plus" class="w-4 h-4"></i> Novo Produto
                             </button>
                         </div>
                     </div>
 
                     <!-- Subtabs Produtos -->
-                    <div class="flex gap-2 mb-8 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit max-w-full overflow-x-auto no-scrollbar">
-                        <button onclick="ui.setProductTab('produtos')" id="tab-product-list" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-white dark:bg-gray-700 text-blue-600 shadow-sm whitespace-nowrap">
+                    <div class="flex gap-2 mb-8 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit max-w-full overflow-hidden no-scrollbar">
+                        <button onclick="ui.setProductTab('produtos')" id="tab-product-list" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-white dark:bg-gray-700 text-[var(--brand)] shadow-sm whitespace-nowrap">
                             Produtos
                         </button>
                         <button onclick="ui.setProductTab('categorias')" id="tab-product-categories" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 whitespace-nowrap">
@@ -847,7 +918,7 @@
                             <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex gap-4">
                                 <div class="relative flex-1">
                                     <i data-lucide="filter" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                                    <select id="filter-product-category" onchange="ui.loadProdutos()" class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                    <select id="filter-product-category" onchange="ui.loadProdutos()" class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-lg text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                                         <option value="all">Todas as Categorias</option>
                                     </select>
                                 </div>
@@ -868,7 +939,7 @@
 
                     <!-- Conteúdo: Estoque Baixo -->
                     <div id="product-low-stock-container" class="hidden">
-                        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-x-auto mb-6">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
@@ -898,14 +969,14 @@
                             <h2 class="text-2xl font-bold dark:text-white">Orçamentos</h2>
                             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">Propostas e aprovações</p>
                         </div>
-                        <button onclick="ui.openModal('modal-orcamento')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
+                        <button onclick="ui.openModal('modal-orcamento')" class="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
                             <i data-lucide="file-plus" class="w-4 h-4"></i> Novo Orçamento
                         </button>
                     </div>
 
                     <!-- Tabs de Orçamentos -->
-                    <div class="flex gap-2 mb-8 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit max-w-full overflow-x-auto no-scrollbar">
-                        <button onclick="ui.setBudgetTab('Pendente')" id="tab-budget-pending" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-white dark:bg-gray-700 text-blue-600 shadow-sm whitespace-nowrap">
+                    <div class="flex gap-2 mb-8 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit max-w-full overflow-hidden no-scrollbar">
+                        <button onclick="ui.setBudgetTab('Pendente')" id="tab-budget-pending" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-white dark:bg-gray-700 text-[var(--brand)] shadow-sm whitespace-nowrap">
                             Pendentes <span id="count-budget-pending" class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-[9px] rounded-md">0</span>
                         </button>
                         <button onclick="ui.setBudgetTab('Aprovado')" id="tab-budget-approved" class="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 whitespace-nowrap">
@@ -930,7 +1001,7 @@
                             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar
                         </button>
                     </div>
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
@@ -958,28 +1029,28 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <!-- Configuração do Link -->
                         <div class="lg:col-span-1 space-y-6">
-                            <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
-                                <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-6">
-                                    <i data-lucide="link" class="w-8 h-8 text-blue-600"></i>
+                            <div class="bg-[var(--bg-card)] rounded-3xl p-8 border border-[var(--border-main)] shadow-sm">
+                                <div class="w-16 h-16 bg-[var(--brand)]/10 rounded-2xl flex items-center justify-center mb-6">
+                                    <i data-lucide="link" class="w-8 h-8 text-[var(--brand)]"></i>
                                 </div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-2">Seu Link Público</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-4">Compartilhe este link para que seus clientes façam pedidos online.</p>
+                                <h3 class="text-lg font-black text-[var(--text-main)] uppercase tracking-tight mb-2">Seu Link Público</h3>
+                                <p class="text-xs text-[var(--text-sub)] font-medium mb-4">Compartilhe este link para que seus clientes façam pedidos online.</p>
                                 
                                 <div id="store-counts-summary"></div>
 
-                                <div class="mt-6 flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                                <div class="mt-6 flex flex-col items-center justify-center p-6 bg-[var(--bg-alt)] rounded-2xl border border-dashed border-[var(--border-main)]">
                                     <div id="store-qr-code" class="bg-white p-2 rounded-xl mb-3 shadow-sm">
-                                        <div class="w-32 h-32 flex items-center justify-center text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Gerando QR...</div>
+                                        <div class="w-32 h-32 flex items-center justify-center text-[10px] text-[var(--text-sub)] font-bold uppercase tracking-widest text-center">Gerando QR...</div>
                                     </div>
-                                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Acesso rápido via QR Code</p>
+                                    <p class="text-[9px] font-black text-[var(--text-sub)] uppercase tracking-widest">Acesso rápido via QR Code</p>
                                 </div>
 
                                 <div class="space-y-4 mt-6">
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-                                        <p id="public-store-url" class="text-xs font-bold text-blue-600 truncate break-all mb-3 underline cursor-pointer" onclick="ui.openPublicStore(event)">Carregando link...</p>
+                                    <div class="p-4 bg-[var(--bg-alt)] rounded-2xl border border-[var(--border-main)]">
+                                        <p id="public-store-url" class="text-xs font-bold text-[var(--brand)] truncate break-all mb-3 underline cursor-pointer" onclick="ui.openPublicStore(event)">Carregando link...</p>
                                         <div class="flex gap-2">
-                                            <button onclick="ui.copyPublicStoreLink()" class="flex-1 px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-gray-200 dark:border-gray-600 transition-all active:scale-95">Copiar</button>
-                                            <button onclick="ui.sharePublicStore()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95">Compartilhar</button>
+                                            <button onclick="ui.copyPublicStoreLink()" class="flex-1 px-4 py-2.5 bg-[var(--bg-card)] text-[var(--text-sub)] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-[var(--border-main)] transition-all active:scale-95">Copiar</button>
+                                            <button onclick="ui.sharePublicStore()" class="flex-1 px-4 py-2.5 bg-[var(--brand)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--brand)]/20 transition-all active:scale-95">Compartilhar</button>
                                         </div>
                                     </div>
                                     
@@ -1058,7 +1129,7 @@
                             <button onclick="ui.exportFullReport('excel', event)" class="relative z-10 px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center gap-2 font-black text-[9px] uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95">
                                 <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-green-500"></i> Excel
                             </button>
-                            <button onclick="ui.openModal('modal-finance')" class="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                            <button onclick="ui.openModal('modal-finance')" class="ml-2 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-[var(--brand)]/20 active:scale-95">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i> Nova Transação
                             </button>
                         </div>
@@ -1080,7 +1151,7 @@
                                 <span class="p-1 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-full"><i data-lucide="trending-down" class="w-3 h-3"></i></span>
                             </div>
                         </div>
-                        <div class="stat-card p-6 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/20">
+                        <div class="stat-card p-6 rounded-2xl bg-[var(--brand)] shadow-xl shadow-[var(--brand)]/20">
                             <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Saldo Atual</p>
                             <h3 class="text-2xl font-black text-white" id="finance-total-balance">R$ 0,00</h3>
                         </div>
@@ -1090,7 +1161,7 @@
                     <div class="bg-white dark:bg-gray-900 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 mb-8 flex flex-wrap gap-6 items-center">
                         <div class="flex-1 min-w-[200px]">
                             <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Período</label>
-                            <select id="finance-filter-period" onchange="ui.loadFinanceiro()" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="finance-filter-period" onchange="ui.loadFinanceiro()" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-[var(--brand)]">
                                 <option value="today">Hoje</option>
                                 <option value="7">Últimos 7 dias</option>
                                 <option value="30" selected>Últimos 30 dias</option>
@@ -1101,7 +1172,7 @@
                         </div>
                         <div class="flex-1 min-w-[200px]">
                             <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipo de Transação</label>
-                            <select id="finance-filter-type" onchange="ui.loadFinanceiro()" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="finance-filter-type" onchange="ui.loadFinanceiro()" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 outline-none focus:ring-2 focus:ring-[var(--brand)]">
                                 <option value="all">Todos os tipos</option>
                                 <option value="entrada">Entradas (Receitas)</option>
                                 <option value="saida">Saídas (Despesas)</option>
@@ -1110,7 +1181,7 @@
                     </div>
 
                     <!-- Transactions Table -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
@@ -1149,9 +1220,9 @@
                     <!-- Charts Grid -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                         <div class="bg-white dark:bg-gray-900 p-10 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-150"></div>
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-[var(--brand)]/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-150"></div>
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
-                                <span class="w-2 h-2 rounded-full bg-blue-500"></span> Receita Mensal
+                                <span class="w-2 h-2 rounded-full bg-[var(--brand)]"></span> Receita Mensal
                             </h3>
                             <div class="h-[320px]">
                                 <canvas id="chart-revenue"></canvas>
@@ -1184,12 +1255,12 @@
 
                         <!-- Clientes -->
                         <div class="bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                            <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-6 text-blue-600">
+                            <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-6 text-[var(--brand)]">
                                 <i data-lucide="users" class="w-6 h-6"></i>
                             </div>
                             <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Clientes Ativos</h4>
                             <p class="text-3xl font-black text-gray-900 dark:text-white" id="report-total-clients">0</p>
-                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-600">
+                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-[var(--brand)]">
                                 <i data-lucide="trending-up" class="w-3 h-3"></i> Novas conexões
                             </div>
                         </div>
@@ -1245,11 +1316,11 @@
                             <h2 class="text-2xl font-bold dark:text-white">Gestão de Usuários</h2>
                             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">Controle de acesso e permissões</p>
                         </div>
-                        <button onclick="ui.openModal('modal-usuario')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
+                        <button onclick="ui.openModal('modal-usuario')" class="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm">
                             <i data-lucide="user-plus" class="w-4 h-4"></i> Novo Usuário
                         </button>
                     </div>
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
@@ -1312,38 +1383,38 @@
                                     <!-- Nome da Aba -->
                                     <div class="w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
                                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Nome da aba do navegador</label>
-                                        <input type="text" id="settings-tab-title" name="tabTitle" placeholder="Ex: Minha Empresa" class="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                                        <input type="text" id="settings-tab-title" name="tabTitle" placeholder="Ex: Minha Empresa" class="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                                     </div>
                                 </div>
 
                                     <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Empresa</label>
-                                            <input type="text" id="settings-company-name" name="companyName" placeholder="Ex: Nome da Sua Empresa" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                            <input type="text" id="settings-company-name" name="companyName" placeholder="Ex: Nome da Sua Empresa" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ</label>
-                                            <input type="text" id="settings-cnpj" name="cnpj" placeholder="00.000.000/0000-00" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white mask-cpf-cnpj">
+                                            <input type="text" id="settings-cnpj" name="cnpj" placeholder="00.000.000/0000-00" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white mask-cpf-cnpj">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
-                                            <input type="text" id="settings-phone" name="phone" placeholder="(00) 0000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white mask-phone">
+                                            <input type="text" id="settings-phone" name="phone" placeholder="(00) 0000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white mask-phone">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp</label>
-                                            <input type="text" id="settings-whatsapp" name="whatsapp" placeholder="(00) 90000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white mask-phone">
+                                            <input type="text" id="settings-whatsapp" name="whatsapp" placeholder="(00) 90000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white mask-phone">
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Slug da Loja (Link Público)</label>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-xs text-gray-500 font-mono">/loja/</span>
-                                                <input type="text" id="settings-store-slug" name="storeSlug" placeholder="Ex: minha-loja" class="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white text-sm font-mono">
+                                                <input type="text" id="settings-store-slug" name="storeSlug" placeholder="Ex: minha-loja" class="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm font-mono">
                                             </div>
                                             <p class="text-[9px] text-gray-400 mt-1 font-bold uppercase tracking-widest">Este nome será usado no link da sua loja pública</p>
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço Completo</label>
-                                            <input type="text" id="settings-address" name="address" placeholder="Rua, Número, Bairro, Cidade - UF" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                            <input type="text" id="settings-address" name="address" placeholder="Rua, Número, Bairro, Cidade - UF" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] dark:text-white">
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Identidade Visual</label>
@@ -1356,13 +1427,13 @@
                                                     </div>
                                                 </div>
                                                 <div class="h-8 w-[1px] bg-gray-200 dark:bg-gray-700 mx-2"></div>
-                                                <input type="text" id="settings-primary-color-text" oninput="ui.handleColorChange(this.value)" placeholder="#000000" class="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white">
+                                                <input type="text" id="settings-primary-color-text" oninput="ui.handleColorChange(this.value)" placeholder="#000000" class="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-[var(--brand)] dark:text-white">
                                             </div>
                                         </div>
                                     </div>
                             </div>
                             <div class="flex justify-end pt-4">
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg transition-colors">Salvar Configurações</button>
+                                <button type="submit" class="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white font-bold py-2 px-8 rounded-lg transition-colors">Salvar Configurações</button>
                             </div>
                         </form>
 
@@ -1405,7 +1476,7 @@
                                     </div>
                                     
                                     <div class="pt-2">
-                                        <button type="button" id="btn-test-db" class="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold py-3 px-4 rounded-xl transition-colors text-xs flex items-center justify-center gap-2">
+                                        <button type="button" id="btn-test-db" class="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-[var(--brand)] dark:text-blue-400 font-bold py-3 px-4 rounded-xl transition-colors text-xs flex items-center justify-center gap-2">
                                             <i data-lucide="activity" class="w-4 h-4"></i> Testar Conexão
                                         </button>
                                         <div id="db-test-result" class="mt-3 text-center text-[10px] font-bold hidden"></div>
@@ -1419,7 +1490,7 @@
                             <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-4 uppercase tracking-widest">Aparência do Sistema</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <button type="button" id="btn-theme-light" onclick="ui.setTheme('light')" class="settings-theme-btn flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-all group bg-white dark:bg-gray-900">
-                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-[var(--brand)] dark:group-hover:text-blue-400 transition-colors">
                                         <i data-lucide="sun" class="w-5 h-5"></i>
                                     </div>
                                     <div class="text-left">
@@ -1428,7 +1499,7 @@
                                     </div>
                                 </button>
                                 <button type="button" id="btn-theme-dark" onclick="ui.setTheme('dark')" class="settings-theme-btn flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-all group bg-white dark:bg-gray-900">
-                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-[var(--brand)] dark:group-hover:text-blue-400 transition-colors">
                                         <i data-lucide="moon" class="w-5 h-5"></i>
                                     </div>
                                     <div class="text-left">
@@ -1444,42 +1515,42 @@
         </main>
 
         <!-- Bottom Navigation (Mobile Only) -->
-        <nav id="bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 safe-area-bottom">
-            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar px-4 py-3">
-                <a href="#dashboard" data-page="dashboard" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <nav id="bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 safe-area-bottom w-full">
+            <div class="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar px-4 py-3 w-full" style="-webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;">
+                <a href="#dashboard" data-page="dashboard" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Início</span>
                 </a>
-                <a href="#orcamentos" data-page="orcamentos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                <a href="#orcamentos" data-page="orcamentos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Orçamentos</span>
                 </a>
-                <a href="#servicos" data-page="servicos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="wrench" class="w-5 h-5"></i>
+                <a href="#servicos" data-page="servicos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="wrench" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Serviços</span>
                 </a>
-                <a href="#produtos" data-page="produtos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="package" class="w-5 h-5"></i>
+                <a href="#produtos" data-page="produtos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="package" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Produtos</span>
                 </a>
-                <a href="#pedidos-recebidos" data-page="pedidos-recebidos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                <a href="#pedidos-recebidos" data-page="pedidos-recebidos" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="shopping-cart" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Pedidos</span>
                 </a>
-                <a href="#clientes" data-page="clientes" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="users" class="w-5 h-5"></i>
+                <a href="#clientes" data-page="clientes" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Clientes</span>
                 </a>
-                <a href="#agenda" data-page="agenda" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                <a href="#agenda" data-page="agenda" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="calendar" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Agenda</span>
                 </a>
-                <a href="#financeiro" data-page="financeiro" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="line-chart" class="w-5 h-5"></i>
+                <a href="#financeiro" data-page="financeiro" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="line-chart" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Financeiro</span>
                 </a>
-                <a href="#relatorios" data-page="relatorios" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors">
-                    <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                <a href="#relatorios" data-page="relatorios" class="mobile-nav-link flex-none flex flex-col items-center gap-1 px-4 text-gray-400 transition-colors w-[70px]">
+                    <i data-lucide="pie-chart" class="w-5 h-5 flex-shrink-0"></i>
                     <span class="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Relatórios</span>
                 </a>
             </div>
@@ -1500,32 +1571,32 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Nome Completo <span class="text-red-500">*</span></label>
-                        <input type="text" id="client-name" required placeholder="Ex: João da Silva" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="client-name" required placeholder="Ex: João da Silva" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">CPF/CNPJ <span class="text-red-500">*</span></label>
-                        <input type="text" id="client-document" placeholder="000.000.000-00" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none mask-cpf-cnpj">
+                        <input type="text" id="client-document" placeholder="000.000.000-00" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none mask-cpf-cnpj">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Telefone <span class="text-red-500">*</span></label>
-                        <input type="text" id="client-phone" required placeholder="(00) 00000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none mask-phone">
+                        <input type="text" id="client-phone" required placeholder="(00) 00000-0000" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none mask-phone">
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">E-mail</label>
-                        <input type="email" id="client-email" placeholder="cliente@exemplo.com" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="email" id="client-email" placeholder="cliente@exemplo.com" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none">
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Endereço</label>
-                        <input type="text" id="client-address" placeholder="Rua, Número, Bairro, Cidade - UF" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="client-address" placeholder="Rua, Número, Bairro, Cidade - UF" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none">
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Observações</label>
-                        <textarea id="client-notes" placeholder="Informações adicionais sobre o cliente..." class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-blue-500 outline-none h-24"></textarea>
+                        <textarea id="client-notes" placeholder="Informações adicionais sobre o cliente..." class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-[var(--brand)] outline-none h-24"></textarea>
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="ui.closeModal('modal-cliente')" class="px-6 py-2 text-[11px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors">Cancelar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20">Salvar Cliente</button>
+                    <button type="submit" class="bg-[var(--brand)] text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--brand)]/20">Salvar Cliente</button>
                 </div>
             </form>
         </div>
@@ -1604,7 +1675,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="ui.closeModal('modal-produto')" class="px-6 py-2 text-[11px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors">Cancelar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20">Salvar Produto</button>
+                    <button type="submit" class="bg-[var(--brand)] text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--brand)]/20">Salvar Produto</button>
                 </div>
             </form>
         </div>
@@ -1615,7 +1686,7 @@
         <div class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-3xl shadow-2xl my-8 overflow-hidden">
             <div class="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
                 <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-blue-600 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-blue-500/20">
+                    <div class="w-12 h-12 bg-[var(--brand)] text-white flex items-center justify-center rounded-2xl shadow-lg shadow-[var(--brand)]/20">
                         <i data-lucide="shopping-cart" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -1635,7 +1706,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <!-- Cliente -->
                     <div class="space-y-4">
-                        <h4 class="text-xs font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <h4 class="text-xs font-black text-[var(--brand)] uppercase tracking-[0.2em] flex items-center gap-2">
                             <i data-lucide="user" class="w-3.5 h-3.5"></i> Informações do Cliente
                         </h4>
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-700/50 space-y-3">
@@ -1666,7 +1737,7 @@
 
                     <!-- Veículo -->
                     <div class="space-y-4">
-                        <h4 class="text-xs font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <h4 class="text-xs font-black text-[var(--brand)] uppercase tracking-[0.2em] flex items-center gap-2">
                             <i data-lucide="car" class="w-3.5 h-3.5"></i> Detalhes do Veículo
                         </h4>
                         <div id="order-detail-vehicle-card" class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-700/50 space-y-3">
@@ -1677,7 +1748,7 @@
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Placa</p>
-                                    <p class="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded w-fit" id="order-detail-vehicle-plate">-</p>
+                                    <p class="text-xs font-bold text-[var(--brand)] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded w-fit" id="order-detail-vehicle-plate">-</p>
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Ano/Cor</p>
@@ -1698,10 +1769,10 @@
                 <!-- Itens -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <h4 class="text-xs font-black text-[var(--brand)] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                             <i data-lucide="package" class="w-3.5 h-3.5"></i> Produtos Solicitados
                         </h4>
-                        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-x-auto shadow-sm">
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                                     <tr>
@@ -1717,10 +1788,10 @@
                     </div>
 
                     <div>
-                        <h4 class="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <h4 class="text-xs font-black text-[var(--brand)] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                             <i data-lucide="wrench" class="w-3.5 h-3.5"></i> Serviços Solicitados
                         </h4>
-                        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-x-auto shadow-sm">
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                                     <tr>
@@ -1740,7 +1811,7 @@
                     <div id="order-link-container" class="space-y-4">
                         <!-- Linked Quote Link will appear here -->
                     </div>
-                    <div class="bg-blue-600 dark:bg-blue-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20">
+                    <div class="bg-[var(--brand)] dark:bg-[var(--brand)] rounded-3xl p-6 text-white shadow-xl shadow-[var(--brand)]/20">
                         <div class="space-y-3">
                             <div class="flex justify-between items-center text-xs opacity-80 uppercase tracking-widest font-bold">
                                 <span>Produtos</span>
@@ -1778,7 +1849,7 @@
         <div class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div class="p-8 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/30 dark:bg-gray-800/30">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-blue-600 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-blue-500/20">
+                    <div class="w-12 h-12 bg-[var(--brand)] text-white flex items-center justify-center rounded-2xl shadow-lg shadow-[var(--brand)]/20">
                         <i data-lucide="plus-circle" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -1794,22 +1865,22 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="col-span-2">
                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Descrição</label>
-                        <input type="text" id="finance-description" required placeholder="Ex: Pagamento Aluguel" class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <input type="text" id="finance-description" required placeholder="Ex: Pagamento Aluguel" class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all">
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Tipo</label>
-                        <select id="finance-type" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <select id="finance-type" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all">
                             <option value="entrada">Entrada (Receita)</option>
                             <option value="saida">Saída (Despesa)</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Valor</label>
-                        <input type="text" id="finance-amount" required placeholder="R$ 0,00" class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all mask-money">
+                        <input type="text" id="finance-amount" required placeholder="R$ 0,00" class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all mask-money">
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Categoria</label>
-                        <select id="finance-category" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <select id="finance-category" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all">
                             <option value="Vendas">Vendas</option>
                             <option value="Serviços">Serviços</option>
                             <option value="Aluguel">Aluguel</option>
@@ -1821,7 +1892,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Status</label>
-                        <select id="finance-status" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <select id="finance-status" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all">
                             <option value="Pago">Pago / Recebido</option>
                             <option value="Pendente">Pendente</option>
                         </select>
@@ -1829,7 +1900,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-6">
                     <button type="button" onclick="ui.closeModal('modal-finance')" class="px-8 py-4 text-[11px] font-black text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-all">Cancelar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+                    <button type="submit" class="bg-[var(--brand)] text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-[var(--brand)]/20 active:scale-95 transition-all">
                         Salvar Transação
                     </button>
                 </div>
@@ -1843,7 +1914,7 @@
             <!-- Header do Modal -->
             <div class="p-8 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/30 dark:bg-gray-800/30">
                 <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-blue-600 text-white flex items-center justify-center rounded-2xl shadow-xl shadow-blue-500/20">
+                    <div class="w-14 h-14 bg-[var(--brand)] text-white flex items-center justify-center rounded-2xl shadow-xl shadow-[var(--brand)]/20">
                         <i data-lucide="file-text" class="w-7 h-7"></i>
                     </div>
                     <div>
@@ -1870,7 +1941,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <!-- Dados da Empresa -->
                             <div class="space-y-4">
-                                <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em] flex items-center gap-2">
                                     <i data-lucide="building-2" class="w-3.5 h-3.5"></i> Prestador de Serviços
                                 </h4>
                                 <div class="bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl p-6 border border-gray-100 dark:border-gray-700/50">
@@ -1897,7 +1968,7 @@
 
                             <!-- Dados do Cliente -->
                             <div class="space-y-4">
-                                <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em] flex items-center gap-2">
                                     <i data-lucide="user" class="w-3.5 h-3.5"></i> Dados do Cliente
                                 </h4>
                                 <div class="bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl p-6 border border-gray-100 dark:border-gray-700/50">
@@ -1925,7 +1996,7 @@
 
                         <!-- Veículo (Opcional) -->
                         <div id="view-vehicle-section" class="space-y-4 hidden">
-                            <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em] flex items-center gap-2">
                                 <i data-lucide="car" class="w-3.5 h-3.5"></i> Informações do Veículo
                             </h4>
                             <div class="bg-blue-50/30 dark:bg-blue-900/10 rounded-3xl p-6 border border-blue-100/50 dark:border-blue-900/20 grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -1935,7 +2006,7 @@
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Placa</p>
-                                    <p class="text-sm font-black text-blue-600 bg-white dark:bg-gray-800 px-3 py-1 rounded-lg w-fit shadow-sm" id="view-vehicle-plate">-</p>
+                                    <p class="text-sm font-black text-[var(--brand)] bg-white dark:bg-gray-800 px-3 py-1 rounded-lg w-fit shadow-sm" id="view-vehicle-plate">-</p>
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Ano/Cor</p>
@@ -1955,7 +2026,7 @@
                                 <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                                     <i data-lucide="wrench" class="w-3.5 h-3.5"></i> Serviços Selecionados
                                 </h4>
-                                <div class="overflow-hidden border border-gray-100 dark:border-gray-800 rounded-3xl">
+                                <div class="overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-3xl">
                                     <table class="w-full text-left">
                                         <thead>
                                             <tr class="bg-gray-50 dark:bg-gray-800/50 text-[9px] font-black text-gray-400 uppercase tracking-widest">
@@ -1977,7 +2048,7 @@
                                 <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                                     <i data-lucide="package" class="w-3.5 h-3.5"></i> Produtos Selecionados
                                 </h4>
-                                <div class="overflow-hidden border border-gray-100 dark:border-gray-800 rounded-3xl">
+                                <div class="overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-3xl">
                                     <table class="w-full text-left">
                                         <thead>
                                             <tr class="bg-gray-50 dark:bg-gray-800/50 text-[9px] font-black text-gray-400 uppercase tracking-widest">
@@ -2080,7 +2151,7 @@
                             <button onclick="ui.exportBudgetPDF()" class="sm:col-span-1 bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
                                 <i data-lucide="file-text" class="w-4 h-4"></i> Exportar PDF
                             </button>
-                            <button id="view-budget-action-btn" class="sm:col-span-1 w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-3">
+                            <button id="view-budget-action-btn" class="sm:col-span-1 w-full py-4 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-[var(--brand)]/20 active:scale-95 flex items-center justify-center gap-3">
                                 <i data-lucide="external-link" class="w-4 h-4"></i> Ver Link Público
                             </button>
                         </div>
@@ -2118,7 +2189,7 @@
             <h3 class="text-2xl font-black text-gray-900 dark:text-white mb-2">Aprovado!</h3>
             <p class="text-sm text-gray-500 font-medium mb-8 leading-relaxed">Orçamento aprovado com sucesso.<br>Deseja imprimir o comprovante agora?</p>
             <div class="flex flex-col gap-3">
-                <button id="btn-print-receipt" class="w-full px-6 py-4 bg-blue-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-3">
+                <button id="btn-print-receipt" class="w-full px-6 py-4 bg-[var(--brand)] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-[var(--brand)]/20 active:scale-95 flex items-center justify-center gap-3">
                     <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Comprovante
                 </button>
                 <button onclick="ui.closeModal('modal-print-confirmation')" class="w-full px-6 py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-gray-200 dark:hover:bg-gray-700">
@@ -2221,7 +2292,7 @@
 
                 <div class="flex justify-end gap-3 pt-6">
                     <button type="button" onclick="ui.closeModal('modal-usuario')" class="px-6 py-2 text-[11px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors">Cancelar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20">Salvar Usuário</button>
+                    <button type="submit" class="bg-[var(--brand)] text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--brand)]/20">Salvar Usuário</button>
                 </div>
             </form>
         </div>
@@ -2238,44 +2309,47 @@
             }
         })();
     </script>
-    <div id="login-screen" class="fixed inset-0 z-[100] bg-[#F9FAFB] dark:bg-[#030712] flex items-center justify-center p-4 transition-all duration-500 hidden">
-        <div class="w-full max-w-[400px] bg-white dark:bg-[#111827] rounded-3xl shadow-2xl border border-[#E5E7EB] dark:border-[#1F2937] p-10 transform transition-all">
-            <div class="flex flex-col items-center mb-10">
-                <div class="w-20 h-20 bg-[#2563EB] rounded-[24px] flex items-center justify-center text-white mb-6 shadow-xl shadow-blue-500/30 company-logo-container">
-                    <i data-lucide="shield-check" class="w-10 h-10"></i>
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-[var(--bg-main)] flex items-center justify-center p-4 transition-all duration-500 hidden overflow-y-auto">
+        <div class="w-full max-w-[400px] bg-[var(--bg-card)] rounded-3xl shadow-2xl border border-[var(--border-main)] p-6 sm:p-10 transform transition-all m-auto">
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-alt)] rounded-[20px] sm:rounded-[24px] flex items-center justify-center mb-6 shadow-xl border border-[var(--border-main)] overflow-hidden company-logo-container">
+                    <img id="login-logo" src="" class="w-full h-full object-contain hidden">
+                    <div id="login-logo-placeholder" class="text-[var(--brand)]">
+                        <i data-lucide="shield-check" class="w-10 h-10"></i>
+                    </div>
                 </div>
-                <h2 class="text-3xl font-black tracking-tight text-[#111827] dark:text-white">Acesso Restrito</h2>
-                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-2">Portal de Gestão Interna</p>
+                <h2 id="login-company-name" class="text-3xl font-black tracking-tight text-[var(--text-main)] text-center">Acesso Restrito</h2>
+                <p class="text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-[0.2em] mt-2">Portal de Gestão Interna</p>
             </div>
             
             <form id="form-login" class="space-y-5">
                 <div class="relative group">
-                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Usuário ou E-mail</label>
+                    <label class="block text-[10px] font-black text-[var(--text-sub)] uppercase tracking-widest mb-1.5 ml-1">Usuário ou E-mail</label>
                     <div class="relative">
-                        <i data-lucide="user" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors"></i>
-                        <input type="text" id="login-user" required class="w-full pl-12 pr-5 py-4 bg-[#F9FAFB] dark:bg-[#1F2937] border border-[#E5E7EB] dark:border-[#374151] rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-all placeholder:text-gray-400" placeholder="Digite seu acesso">
+                        <i data-lucide="user" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-sub)] group-focus-within:text-[var(--brand)] transition-colors"></i>
+                        <input type="text" id="login-user" required class="w-full pl-12 pr-5 py-4 bg-[var(--input-bg)] border border-[var(--border-main)] rounded-2xl text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent transition-all placeholder:text-[var(--text-sub)]" placeholder="Digite seu acesso">
                     </div>
                 </div>
                 <div class="relative group">
-                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Senha Segura</label>
+                    <label class="block text-[10px] font-black text-[var(--text-sub)] uppercase tracking-widest mb-1.5 ml-1">Senha Segura</label>
                     <div class="relative">
-                        <i data-lucide="key-round" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors"></i>
-                        <input type="password" id="login-pass" required class="w-full pl-12 pr-12 py-4 bg-[#F9FAFB] dark:bg-[#1F2937] border border-[#E5E7EB] dark:border-[#374151] rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-all" placeholder="••••••••">
-                        <button type="button" onclick="ui.togglePassword('login-pass')" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none">
+                        <i data-lucide="key-round" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-sub)] group-focus-within:text-[var(--brand)] transition-colors"></i>
+                        <input type="password" id="login-pass" required class="w-full pl-12 pr-12 py-4 bg-[var(--input-bg)] border border-[var(--border-main)] rounded-2xl text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent transition-all placeholder:text-[var(--text-sub)]" placeholder="••••••••">
+                        <button type="button" onclick="ui.togglePassword('login-pass')" class="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-sub)] hover:text-[var(--brand)] transition-colors focus:outline-none">
                             <i data-lucide="eye" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
                 
                 <div class="flex items-center justify-between text-[11px] font-bold px-1">
-                    <label class="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-gray-700 transition-colors">
-                        <input type="checkbox" id="login-remember" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <label class="flex items-center gap-2 cursor-pointer text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors">
+                        <input type="checkbox" id="login-remember" class="rounded border-[var(--border-main)] text-[var(--brand)] focus:ring-[var(--brand)]">
                         Lembrar Login
                     </label>
-                    <a href="#" class="text-blue-600 hover:underline">Esqueci a senha</a>
+                    <a href="#" class="text-[var(--brand)] hover:underline">Esqueci a senha</a>
                 </div>
 
-                <button type="submit" class="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-black py-4 rounded-2xl uppercase tracking-[0.1em] text-xs shadow-lg shadow-blue-500/20 transition-all active:scale-[0.97] mt-4">
+                <button type="submit" class="w-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white font-black py-4 rounded-2xl uppercase tracking-[0.1em] text-xs shadow-lg shadow-[var(--brand)]/20 transition-all active:scale-[0.97] mt-4">
                     Entrar no Sistema
                 </button>
                 
@@ -2292,23 +2366,23 @@
     </div>
 
     <!-- Public Loader Section -->
-    <div id="public-loader" class="fixed inset-0 z-[200] bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center hidden">
-        <div class="w-16 h-16 bg-white dark:bg-gray-900 rounded-2xl shadow-xl flex items-center justify-center mb-6 animate-pulse border border-gray-200 dark:border-gray-800">
-            <i data-lucide="briefcase" class="w-8 h-8 text-blue-600"></i>
+    <div id="public-loader" class="fixed inset-0 z-[200] bg-[var(--bg-main)] flex flex-col items-center justify-center">
+        <div class="w-16 h-16 bg-[var(--bg-card)] rounded-2xl shadow-xl flex items-center justify-center mb-6 animate-pulse border border-[var(--border-main)]">
+            <i data-lucide="briefcase" class="w-8 h-8 text-[var(--brand)]"></i>
         </div>
         <div class="flex gap-2 mb-2">
-            <div class="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0ms"></div>
-            <div class="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 150ms"></div>
-            <div class="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 300ms"></div>
+            <div class="w-2 h-2 rounded-full bg-[var(--brand)] animate-bounce" style="animation-delay: 0ms"></div>
+            <div class="w-2 h-2 rounded-full bg-[var(--brand)] animate-bounce" style="animation-delay: 150ms"></div>
+            <div class="w-2 h-2 rounded-full bg-[var(--brand)] animate-bounce" style="animation-delay: 300ms"></div>
         </div>
-        <h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest mt-4">Carregando Informações</h2>
-        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Sincronizando com o sistema...</p>
+        <h2 class="text-sm font-bold text-[var(--text-main)] uppercase tracking-widest mt-4">Carregando Informações</h2>
+        <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase tracking-widest mt-1">Sincronizando com o sistema...</p>
     </div>
 
     <!-- Public Budget View Section -->
-    <div id="public-budget-view" class="fixed inset-0 z-[150] bg-gray-50 dark:bg-gray-950 overflow-y-auto hidden">
+    <div id="public-budget-view" class="fixed inset-0 z-[150] bg-[var(--bg-main)] overflow-y-auto hidden">
         <div class="max-w-4xl mx-auto py-12 px-6">
-            <div id="public-budget-content" class="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div id="public-budget-content" class="bg-[var(--bg-card)] rounded-3xl shadow-2xl border border-[var(--border-main)] overflow-hidden">
                 <!-- Content injected via JS -->
             </div>
             <div class="mt-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">
@@ -2360,7 +2434,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="ui.closeModal('modal-servico')" class="px-6 py-2 text-[11px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors">Cancelar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20">Salvar Serviço</button>
+                    <button type="submit" class="bg-[var(--brand)] text-white px-8 py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--brand)]/20">Salvar Serviço</button>
                 </div>
             </form>
         </div>
@@ -2371,7 +2445,7 @@
         <div class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-xl my-8">
             <div class="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center rounded-xl">
+                    <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 text-[var(--brand)] flex items-center justify-center rounded-xl">
                         <i data-lucide="file-text" class="w-5 h-5"></i>
                     </div>
                     <div>
@@ -2389,43 +2463,43 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="col-span-1 md:col-span-2">
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Nome do Cliente <span class="text-red-500">*</span></label>
-                            <input type="text" id="budget-client-name" required placeholder="Ex: João Silva" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="budget-client-name" required placeholder="Ex: João Silva" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">CPF / CNPJ <span class="text-red-500">*</span></label>
-                            <input type="text" id="budget-client-doc" required placeholder="000.000.000-00" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 mask-cpf-cnpj">
+                            <input type="text" id="budget-client-doc" required placeholder="000.000.000-00" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] mask-cpf-cnpj">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">WhatsApp <span class="text-red-500">*</span></label>
-                            <input type="text" id="budget-client-phone" required placeholder="(00) 00000-0000" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 mask-phone">
+                            <input type="text" id="budget-client-phone" required placeholder="(00) 00000-0000" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] mask-phone">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Telefone</label>
-                            <input type="text" id="budget-client-tel" placeholder="(00) 0000-0000" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500 mask-phone">
+                            <input type="text" id="budget-client-tel" placeholder="(00) 0000-0000" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)] mask-phone">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">E-mail (Opcional)</label>
-                            <input type="email" id="budget-client-email" placeholder="cliente@exemplo.com" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="email" id="budget-client-email" placeholder="cliente@exemplo.com" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]">
                         </div>
                         <div class="col-span-1 md:col-span-2">
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Endereço (Opcional)</label>
-                            <input type="text" id="budget-client-address" placeholder="Rua Exemplo, 123" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="budget-client-address" placeholder="Rua Exemplo, 123" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Validade</label>
-                            <input type="date" id="budget-validity" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="date" id="budget-validity" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Data Prevista de Execução <span class="text-red-500">*</span></label>
-                            <input type="date" id="budget-execution-date" required class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="date" id="budget-execution-date" required class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]">
                         </div>
                         <div class="col-span-1 md:col-span-2">
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">O que será feito <span class="text-red-500">*</span></label>
-                            <textarea id="budget-work" required rows="2" placeholder="Descreva os serviços que serão realizados..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <textarea id="budget-work" required rows="2" placeholder="Descreva os serviços que serão realizados..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]"></textarea>
                         </div>
                         <div class="col-span-1 md:col-span-2">
                             <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Observações <span class="text-red-500">*</span></label>
-                            <textarea id="budget-observations" required rows="2" placeholder="Informações adicionais sobre o serviço ou condições de pagamento..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <textarea id="budget-observations" required rows="2" placeholder="Informações adicionais sobre o serviço ou condições de pagamento..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[var(--brand)]"></textarea>
                         </div>
                         
                         <!-- Vehicle Fields (Optional) -->
@@ -2434,23 +2508,23 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Placa</label>
-                                    <input type="text" id="budget-vehicle-plate" placeholder="ABC-1234" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-blue-500 uppercase">
+                                    <input type="text" id="budget-vehicle-plate" placeholder="ABC-1234" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-[var(--brand)] uppercase">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Modelo</label>
-                                    <input type="text" id="budget-vehicle-model" placeholder="Ex: Honda CG 160" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                    <input type="text" id="budget-vehicle-model" placeholder="Ex: Honda CG 160" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-[var(--brand)]">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ano</label>
-                                    <input type="text" id="budget-vehicle-year" placeholder="2022" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                    <input type="text" id="budget-vehicle-year" placeholder="2022" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-[var(--brand)]">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cor</label>
-                                    <input type="text" id="budget-vehicle-color" placeholder="Ex: Vermelho" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                    <input type="text" id="budget-vehicle-color" placeholder="Ex: Vermelho" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-[var(--brand)]">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">KM</label>
-                                    <input type="text" id="budget-vehicle-km" placeholder="0" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                    <input type="text" id="budget-vehicle-km" placeholder="0" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white text-xs outline-none focus:ring-1 focus:ring-[var(--brand)]">
                                 </div>
                             </div>
                         </div>
@@ -2465,8 +2539,8 @@
                         <div class="relative">
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Serviços</label>
                             <div class="relative group">
-                                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors"></i>
-                                <input type="text" id="search-services" oninput="ui.filterBudgetItems('services')" onfocus="ui.filterBudgetItems('services')" placeholder="🔍 Digite para pesquisar serviços..." class="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm">
+                                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--brand)] transition-colors"></i>
+                                <input type="text" id="search-services" oninput="ui.filterBudgetItems('services')" onfocus="ui.filterBudgetItems('services')" placeholder="🔍 Digite para pesquisar serviços..." class="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-blue-500 transition-all shadow-sm">
                                 
                                 <!-- Results Dropdown -->
                                 <div id="available-services-list" class="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl z-50 max-h-[300px] overflow-y-auto hidden custom-scrollbar">
@@ -2494,7 +2568,7 @@
                     <div class="space-y-4">
                         <div class="flex items-center justify-between px-2">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600">
+                                <div class="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-[var(--brand)]">
                                     <i data-lucide="list-checks" class="w-4 h-4"></i>
                                 </div>
                                 <h4 class="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest">Itens Selecionados</h4>
@@ -2581,30 +2655,30 @@
                             <div class="flex justify-between items-center text-sm">
                                 <div class="flex items-center gap-2">
                                     <span class="text-gray-500 dark:text-gray-400 font-medium">Descontos:</span>
-                                    <select id="budget-discount-type" onchange="ui.updateBudgetSummary()" class="text-[10px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-1 outline-none text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500">
+                                    <select id="budget-discount-type" onchange="ui.updateBudgetSummary()" class="text-[10px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-1 outline-none text-gray-900 dark:text-white focus:ring-1 focus:ring-[var(--brand)]">
                                         <option value="percentage">%</option>
                                         <option value="fixed">R$</option>
                                     </select>
                                 </div>
-                                <input type="text" id="budget-discount" value="0" oninput="ui.updateBudgetSummary()" class="w-24 px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-right font-bold text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500">
+                                <input type="text" id="budget-discount" value="0" oninput="ui.updateBudgetSummary()" class="w-24 px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-right font-bold text-gray-900 dark:text-white focus:ring-1 focus:ring-[var(--brand)]">
                             </div>
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest">Mão de Obra (Obrigatório):</span>
-                                <input type="text" id="budget-labor-cost" required placeholder="R$ 0,00" oninput="ui.updateBudgetSummary()" class="w-32 px-3 py-2 bg-white dark:bg-gray-900 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl text-right font-black text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none mask-money">
+                                <input type="text" id="budget-labor-cost" required placeholder="R$ 0,00" oninput="ui.updateBudgetSummary()" class="w-32 px-3 py-2 bg-white dark:bg-gray-900 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl text-right font-black text-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)] outline-none mask-money">
                             </div>
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest">⏱ Tempo Total Estimado:</span>
                                 <div class="flex flex-col items-end gap-1">
                                     <div class="flex items-center gap-2">
-                                        <input type="number" id="budget-total-time" min="1" required placeholder="Minutos" oninput="ui.updateSmartTime()" class="w-32 px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl text-right font-black text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <input type="number" id="budget-total-time" min="1" required placeholder="Minutos" oninput="ui.updateSmartTime()" class="w-32 px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl text-right font-black text-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)] outline-none">
                                         <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">min</span>
                                     </div>
-                                    <span id="budget-total-time-display" class="text-[10px] font-black text-blue-600 uppercase tracking-tight">Não informado</span>
+                                    <span id="budget-total-time-display" class="text-[10px] font-black text-[var(--brand)] uppercase tracking-tight">Não informado</span>
                                 </div>
                             </div>
                             <div class="flex justify-between items-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
                                 <div class="text-xs font-bold text-gray-400 uppercase tracking-widest">Valor Final</div>
-                                <div class="text-3xl font-black text-blue-600" id="summary-total">R$ 0,00</div>
+                                <div class="text-3xl font-black text-[var(--brand)]" id="summary-total">R$ 0,00</div>
                             </div>
                         </div>
                     </div>
@@ -2617,7 +2691,7 @@
                     </button>
                     <div class="flex gap-3">
                         <button type="button" onclick="ui.closeModal('modal-orcamento')" class="px-6 py-2 text-[11px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors">Cancelar</button>
-                        <button type="button" id="budget-btn-next" onclick="ui.nextBudgetStep()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 flex items-center gap-2">
+                        <button type="button" id="budget-btn-next" onclick="ui.nextBudgetStep()" class="bg-[var(--brand)] text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 transition-all hover:bg-[var(--brand-hover)] active:scale-95 flex items-center gap-2">
                             Avançar <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </button>
                         <button type="submit" id="budget-btn-submit" class="hidden bg-green-600 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-green-500/30 transition-all hover:bg-green-700 active:scale-95">
@@ -2642,11 +2716,11 @@
                     <input type="hidden" id="category-id">
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Nome da Categoria</label>
-                        <input type="text" id="category-name" required placeholder="Ex: Óleos, Pneus..." class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <input type="text" id="category-name" required placeholder="Ex: Óleos, Pneus..." class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipo de Categoria</label>
-                        <select id="category-type" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="category-type" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             <option value="Produtos">Produtos</option>
                             <option value="Serviços">Serviços</option>
                             <option value="Ambos">Ambos (Produtos e Serviços)</option>
@@ -2654,7 +2728,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Descrição (Opcional)</label>
-                        <textarea id="category-description" rows="2" placeholder="Descreva o propósito desta categoria..." class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"></textarea>
+                        <textarea id="category-description" rows="2" placeholder="Descreva o propósito desta categoria..." class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all"></textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -2663,7 +2737,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Ícone</label>
-                            <select id="category-icon" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="category-icon" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                                 <option value="tag">Etiqueta</option>
                                 <option value="package">Pacote</option>
                                 <option value="wrench">Ferramenta</option>
@@ -2677,7 +2751,7 @@
                     
                     <div class="flex gap-3 pt-4">
                         <button type="button" onclick="ui.closeModal('modal-categoria')" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold uppercase tracking-widest transition-all">Cancelar</button>
-                        <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20">Salvar Categoria</button>
+                        <button type="submit" class="flex-1 px-4 py-3 bg-[var(--brand)] text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-[var(--brand)]/20">Salvar Categoria</button>
                     </div>
                 </form>
             </div>
@@ -2695,7 +2769,7 @@
                             <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         </button>
                         <img id="store-logo" src="" class="w-12 h-12 rounded-2xl object-contain bg-gray-50 dark:bg-gray-800 p-1 hidden">
-                        <div id="store-logo-placeholder" class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                        <div id="store-logo-placeholder" class="w-12 h-12 bg-[var(--brand)] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[var(--brand)]/20">
                             <i data-lucide="briefcase" class="w-6 h-6"></i>
                         </div>
                         <div>
@@ -2708,14 +2782,14 @@
                     </div>
                     <button onclick="ui.toggleStoreCart()" class="relative p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-600 dark:text-gray-300 active:scale-90 transition-transform">
                         <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-                        <span id="store-cart-count" class="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900">0</span>
+                        <span id="store-cart-count" class="absolute -top-1 -right-1 w-5 h-5 bg-[var(--brand)] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900">0</span>
                     </button>
                 </div>
 
                 <!-- Search Bar -->
                 <div class="relative group">
-                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                    <input type="text" id="store-search" oninput="ui.handleStoreSearch()" placeholder="Pesquisar produtos ou serviços..." class="w-full pl-11 pr-4 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[var(--brand)] transition-colors"></i>
+                    <input type="text" id="store-search" oninput="ui.handleStoreSearch()" placeholder="Pesquisar produtos ou serviços..." class="w-full pl-11 pr-4 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]/20 focus:border-blue-500 transition-all shadow-sm">
                 </div>
             </header>
 
@@ -2723,7 +2797,7 @@
             <!-- Sub-tabs: Produtos | Serviços -->
             <div class="px-6 py-4 sticky top-[138px] bg-gray-50/80 dark:bg-[#030712]/80 backdrop-blur-md z-30">
                 <div class="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                    <button id="store-tab-products" onclick="ui.setStoreSection('products')" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white dark:bg-gray-700 text-blue-600 shadow-sm">Produtos</button>
+                    <button id="store-tab-products" onclick="ui.setStoreSection('products')" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white dark:bg-gray-700 text-[var(--brand)] shadow-sm">Produtos</button>
                     <button id="store-tab-services" onclick="ui.setStoreSection('services')" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600">Serviços</button>
                 </div>
             </div>
@@ -2742,7 +2816,7 @@
 
             <!-- Bottom Navigation -->
             <nav id="store-bottom-nav" class="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 px-6 py-3 flex justify-around items-center">
-                <button onclick="ui.setStoreSection('all')" class="flex flex-col items-center gap-1 text-blue-600 transition-all active:scale-90">
+                <button onclick="ui.setStoreSection('all')" class="flex flex-col items-center gap-1 text-[var(--brand)] transition-all active:scale-90">
                     <i data-lucide="home" class="w-5 h-5"></i>
                     <span class="text-[9px] font-black uppercase tracking-widest">Início</span>
                 </button>
@@ -2765,7 +2839,7 @@
 
             <!-- Floating Cart Bar -->
             <div id="store-cart-footer" class="fixed bottom-24 left-6 right-6 z-40 transform transition-all duration-500 translate-y-32 opacity-0 pointer-events-none">
-                <button onclick="ui.toggleStoreCart()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-3xl shadow-2xl shadow-blue-500/40 flex items-center justify-between group">
+                <button onclick="ui.toggleStoreCart()" class="w-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white p-5 rounded-3xl shadow-2xl shadow-blue-500/40 flex items-center justify-between group">
                     <div class="flex items-center gap-4">
                         <div class="p-2 bg-white/20 rounded-xl">
                             <i data-lucide="shopping-cart" class="w-5 h-5"></i>
@@ -2814,11 +2888,11 @@
                     </div>
                     <div class="pt-4 flex justify-between items-end">
                         <div class="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest">Valor Total</div>
-                        <div class="text-3xl font-black text-blue-600" id="store-cart-total">R$ 0,00</div>
+                        <div class="text-3xl font-black text-[var(--brand)]" id="store-cart-total">R$ 0,00</div>
                     </div>
                 </div>
 
-                <button onclick="ui.openStoreCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-95 mb-6">
+                <button onclick="ui.openStoreCheckout()" class="w-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-95 mb-6">
                     Enviar Solicitação
                 </button>
             </div>
@@ -2838,60 +2912,60 @@
                 <form id="form-store-checkout" onsubmit="ui.submitStoreOrder(event)" class="space-y-8 pb-12">
                     <!-- Same form as Budget -->
                     <div class="space-y-6">
-                        <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Dados Pessoais</h4>
+                        <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em]">Dados Pessoais</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nome Completo</label>
-                                <input type="text" id="store-client-name" required placeholder="Digite seu nome completo" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-client-name" required placeholder="Digite seu nome completo" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">CPF ou CNPJ</label>
-                                <input type="text" id="store-client-doc" required placeholder="000.000.000-00" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 mask-cpf-cnpj">
+                                <input type="text" id="store-client-doc" required placeholder="000.000.000-00" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] mask-cpf-cnpj">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">WhatsApp</label>
-                                <input type="text" id="store-client-phone" required placeholder="(00) 90000-0000" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 mask-phone">
+                                <input type="text" id="store-client-phone" required placeholder="(00) 90000-0000" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] mask-phone">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Endereço Completo</label>
-                                <input type="text" id="store-client-address" required placeholder="Rua, Número, Bairro, Cidade" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-client-address" required placeholder="Rua, Número, Bairro, Cidade" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-                        <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Dados do Veículo</h4>
+                        <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em]">Dados do Veículo</h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Placa</label>
-                                <input type="text" id="store-vehicle-plate" required placeholder="ABC1D23" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+                                <input type="text" id="store-vehicle-plate" required placeholder="ABC1D23" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] uppercase">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Marca</label>
-                                <input type="text" id="store-vehicle-brand" required placeholder="Honda" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-vehicle-brand" required placeholder="Honda" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Modelo</label>
-                                <input type="text" id="store-vehicle-model" required placeholder="Civic" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-vehicle-model" required placeholder="Civic" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ano</label>
-                                <input type="text" id="store-vehicle-year" required placeholder="2022" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-vehicle-year" required placeholder="2022" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cor</label>
-                                <input type="text" id="store-vehicle-color" required placeholder="Prata" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-vehicle-color" required placeholder="Prata" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Km Atual</label>
-                                <input type="text" id="store-vehicle-km" required placeholder="50.000" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="store-vehicle-km" required placeholder="50.000" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]">
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-                        <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Observações Adicionais *</h4>
-                        <textarea id="store-order-notes" required rows="3" placeholder="Algo mais que precisamos saber? (Obrigatório)" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                        <h4 class="text-[10px] font-black text-[var(--brand)] uppercase tracking-[0.2em]">Observações Adicionais *</h4>
+                        <textarea id="store-order-notes" required rows="3" placeholder="Algo mais que precisamos saber? (Obrigatório)" class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] resize-none"></textarea>
                     </div>
 
                     <div class="space-y-4 pt-6 border-t border-gray-100 dark:border-gray-800">
@@ -2991,6 +3065,16 @@
     </div>
 
     <!-- Scripts -->
+    <script>
+        // Debugging global para detectar recarregamentos e submissões
+        window.addEventListener('beforeunload', () => {
+            console.log('Página está sendo recarregada ou navegada para fora.');
+        });
+        
+        document.addEventListener('submit', (e) => {
+            console.log('Global submit detectado em:', e.target.id);
+        }, true);
+    </script>
     <script type="module" src="/assets/js/app.js"></script>
 
     <!-- Fix para destravamento do UI no recarregamento -->
@@ -2998,13 +3082,16 @@
     // DEFROSTER - Garante que a interface esteja sempre clicável após o carregamento
     (function() {
         const defrost = () => {
+            // 0. Renderizar Ícones
+            if (window.lucide) window.lucide.createIcons();
+
             // 1. Destravar Pointer Events
             document.body.style.pointerEvents = 'auto';
             document.documentElement.style.pointerEvents = 'auto';
             
             const h = window.location.hash || '#dashboard';
             const isPublic = h.startsWith('#loja') || h.startsWith('#orcamento/') || h === '#loja-publica' || h.startsWith('#pedido/');
-            const hasAuth = !!localStorage.getItem('gestao_pro_auth');
+            const hasAuth = (() => { try { return !!localStorage.getItem('gestao_pro_auth'); } catch(e) { return false; } })();
             
             const appShell = document.getElementById('app-shell');
             if (appShell) {
@@ -3084,7 +3171,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Initialize Default State
         setTimeout(() => {
-            const isFirebase = !!(window.db || window.firebaseDb || localStorage.getItem('gestao_pro_firebase_active') === 'true');
+            const isFirebase = !!(window.db || window.firebaseDb || ((() => { try { return localStorage.getItem('gestao_pro_firebase_active'); } catch(e) { return null; } })()) === 'true');
             const inUseEl = document.getElementById('db-in-use');
             if (inUseEl) inUseEl.innerText = isFirebase ? 'Firebase (Nuvem)' : 'LocalStorage (Local)';
             
@@ -3128,7 +3215,7 @@
                 if (window.lucide) window.lucide.createIcons();
                 
                 try {
-                    const isFirebase = !!(window.db || window.firebaseDb || localStorage.getItem('gestao_pro_firebase_active') === 'true');
+                    const isFirebase = !!(window.db || window.firebaseDb || ((() => { try { return localStorage.getItem('gestao_pro_firebase_active'); } catch(e) { return null; } })()) === 'true');
                     document.getElementById('db-in-use').innerText = isFirebase ? 'Firebase (Nuvem)' : 'LocalStorage (Local)';
                     
                     const startRead = performance.now();
@@ -3148,7 +3235,7 @@
                     writeStatus.className = 'text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400';
                     
                     btn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> Teste Concluído';
-                    btn.classList.remove('bg-blue-50', 'text-blue-600');
+                    btn.classList.remove('bg-blue-50', 'text-[var(--brand)]');
                     btn.classList.add('bg-green-50', 'text-green-600', 'dark:bg-green-900/20', 'dark:text-green-400');
                     
                     resultDiv.className = 'mt-3 text-center text-[10px] font-bold text-green-600 dark:text-green-400';
@@ -3163,7 +3250,7 @@
                     
                 } catch (e) {
                     btn.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> Falha no Teste';
-                    btn.classList.remove('bg-blue-50', 'text-blue-600');
+                    btn.classList.remove('bg-blue-50', 'text-[var(--brand)]');
                     btn.classList.add('bg-red-50', 'text-red-600', 'dark:bg-red-900/20', 'dark:text-red-400');
                     
                     resultDiv.className = 'mt-3 text-center text-[10px] font-bold text-red-600 dark:text-red-400';
@@ -3184,7 +3271,7 @@
                         btn.disabled = false;
                         btn.innerHTML = '<i data-lucide="activity" class="w-4 h-4"></i> Testar Novamente';
                         btn.classList.remove('bg-green-50', 'text-green-600', 'bg-red-50', 'text-red-600', 'dark:bg-green-900/20', 'dark:text-green-400', 'dark:bg-red-900/20', 'dark:text-red-400');
-                        btn.classList.add('bg-blue-50', 'text-blue-600');
+                        btn.classList.add('bg-blue-50', 'text-[var(--brand)]');
                         if (window.lucide) window.lucide.createIcons();
                     }, 4000);
                 }
@@ -3212,33 +3299,33 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Data</label>
-                        <input type="date" id="agenda-date" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                        <input type="date" id="agenda-date" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Horário</label>
-                        <input type="time" id="agenda-time" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                        <input type="time" id="agenda-time" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                     </div>
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Cliente</label>
-                    <select id="agenda-client" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                    <select id="agenda-client" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                         <option value="">Selecione um cliente</option>
                     </select>
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Serviço / Título</label>
-                    <input type="text" id="agenda-title" placeholder="Ex: Manutenção de Equipamento" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white text-sm">
+                    <input type="text" id="agenda-title" placeholder="Ex: Manutenção de Equipamento" required class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm">
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Observações</label>
-                    <textarea id="agenda-notes" rows="3" placeholder="Detalhes adicionais..." class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white text-sm resize-none"></textarea>
+                    <textarea id="agenda-notes" rows="3" placeholder="Detalhes adicionais..." class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-[var(--brand)] dark:text-white text-sm resize-none"></textarea>
                 </div>
 
                 <div class="pt-4">
-                    <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-blue-500/25 active:scale-95">
+                    <button type="submit" class="w-full py-4 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-[var(--brand)]/25 active:scale-95">
                         Salvar Agendamento
                     </button>
                 </div>
@@ -3291,7 +3378,7 @@
                     </div>
                 </div>
 
-                <div class="bg-blue-600 rounded-2xl p-6 text-white flex justify-between items-center mb-8">
+                <div class="bg-[var(--brand)] rounded-2xl p-6 text-white flex justify-between items-center mb-8">
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Total do Pedido</p>
                         <h2 class="text-2xl font-black" id="view-order-total">R$ 0,00</h2>

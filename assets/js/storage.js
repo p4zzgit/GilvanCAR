@@ -57,29 +57,36 @@ const Storage = {
         console.log('Iniciando sincronização com Firebase...');
         this.isSyncing = true;
         try {
-            const auth = localStorage.getItem(this.KEYS.AUTH);
+            let auth = null; try { auth = localStorage.getItem(this.KEYS.AUTH); } catch(e) { auth = (window._memStore || {})[this.KEYS.AUTH] || null; }
+            
+            // Sincronizar configurações primeiro (crítico para branding)
+            await this.syncFromFirebase(this.KEYS.SETTINGS);
+            
+            // Sincronizar o resto em paralelo
             let keysToSync;
-
             if (auth) {
-                // Usuário logado: Sincroniza tudo
-                keysToSync = Object.keys(this.COLLECTIONS);
+                // Usuário logado: Sincroniza o resto
+                keysToSync = Object.keys(this.COLLECTIONS).filter(k => k !== this.KEYS.SETTINGS);
             } else {
-                // Visitante público: Sincroniza apenas o necessário para a Loja/Orçamentos
+                // Visitante público: Sincroniza o resto necessário
                 keysToSync = [
-                    this.KEYS.SETTINGS,
                     this.KEYS.PRODUCTS,
                     this.KEYS.SERVICES,
                     this.KEYS.CATEGORIES,
-                    this.KEYS.BUDGETS, // Necessário para ver orçamentos públicos
-                    this.KEYS.COUNTERS // Necessário para gerar IDs se permitido
+                    this.KEYS.BUDGETS,
+                    this.KEYS.COUNTERS
                 ];
             }
 
             const syncPromises = keysToSync.map(key => this.syncFromFirebase(key));
-            await Promise.all(syncPromises);
+            Promise.all(syncPromises).then(() => {
+                console.log('Sincronização de dados concluída!');
+                this.isSyncing = false;
+                if (window.ui && typeof window.ui.renderAll === 'function') {
+                    window.ui.renderAll();
+                }
+            });
             
-            console.log('Sincronização concluída!');
-            this.isSyncing = false;
             return true;
         } catch (error) {
             console.error('Erro na sincronização inicial:', error);
@@ -96,7 +103,7 @@ const Storage = {
         try {
             console.log(`Sincronizando ${collectionName}...`);
             
-            // Timeout de 60 segundos para não travar a inicialização
+            // Timeout de 60 segundos para não travar a inicialização mas dar tempo ao Firebase
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error(`Timeout ao carregar ${collectionName} (60s)`)), 60000)
             );
@@ -121,7 +128,7 @@ const Storage = {
                 });
             }
 
-            localStorage.setItem(key, JSON.stringify(data));
+            try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[key] = JSON.stringify(data); }
         } catch (error) {
             console.error(`Erro ao sincronizar ${collectionName}:`, error);
         }
@@ -134,7 +141,7 @@ const Storage = {
         
         if (Array.isArray(data)) {
             data = data.filter(item => item.id !== id);
-            localStorage.setItem(key, JSON.stringify(data));
+            try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[key] = JSON.stringify(data); }
             
             if (collectionName) {
                 try {
@@ -149,7 +156,7 @@ const Storage = {
     // Salvar dados no LocalStorage e Firebase
     async save(key, data) {
         // Salvar localmente primeiro para resposta rápida
-        localStorage.setItem(key, JSON.stringify(data));
+        try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[key] = JSON.stringify(data); }
 
         const collectionName = this.COLLECTIONS[key];
         if (!collectionName) return;
@@ -188,20 +195,34 @@ const Storage = {
     },
 
     get(key) {
-        const data = localStorage.getItem(key);
-        if (key === this.KEYS.SETTINGS) {
-            return data ? JSON.parse(data) : this.getDefaultSettings();
+        try {
+            let data = null; try { data = localStorage.getItem(key); } catch(e) { data = (window._memStore || {})[key] || null; }
+            if (key === this.KEYS.SETTINGS) {
+                return data ? JSON.parse(data) : this.getDefaultSettings();
+            }
+            if (key === this.KEYS.COUNTERS) {
+                return data ? JSON.parse(data) : { OS: 0, ORC: 0, PED: 0 };
+            }
+            if (key === this.KEYS.AUTH) {
+                return data ? JSON.parse(data) : null;
+            }
+            if (key === this.KEYS.USERS) {
+                const parsed = data ? JSON.parse(data) : null;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
+                console.log('Usando usuários padrão (vazio ou erro no Storage)');
+                return this.getDefaultUsers();
+            }
+            const parsed = data ? JSON.parse(data) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.error(`Erro ao ler ${key} do localStorage:`, e);
+            if (key === this.KEYS.SETTINGS) return this.getDefaultSettings();
+            if (key === this.KEYS.USERS) return this.getDefaultUsers();
+            if (key === this.KEYS.COUNTERS) return { OS: 0, ORC: 0, PED: 0 };
+            return [];
         }
-        if (key === this.KEYS.COUNTERS) {
-            return data ? JSON.parse(data) : { OS: 0, ORC: 0, PED: 0 };
-        }
-        if (key === this.KEYS.AUTH) {
-            return data ? JSON.parse(data) : null;
-        }
-        if (key === this.KEYS.USERS && (!data || JSON.parse(data).length === 0)) {
-            return this.getDefaultUsers();
-        }
-        return data ? JSON.parse(data) : [];
     },
 
     getDefaultSettings() {
@@ -242,7 +263,7 @@ const Storage = {
 
     // Get next sequential number
     async getNextNumber(type) {
-        let counters = localStorage.getItem(this.KEYS.COUNTERS);
+        let counters = null; try { counters = localStorage.getItem(this.KEYS.COUNTERS); } catch(e) { counters = (window._memStore || {})[this.KEYS.COUNTERS] || null; }
         counters = counters ? JSON.parse(counters) : { OS: 0, ORC: 0, PED: 0 };
         
         counters[type] = (counters[type] || 0) + 1;
@@ -272,10 +293,10 @@ const Storage = {
             } else {
                 data.push(item);
             }
-            localStorage.setItem(key, JSON.stringify(data));
+            try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[key] = JSON.stringify(data); }
         } else {
             // Se for objeto único (settings/counters)
-            localStorage.setItem(key, JSON.stringify(item));
+            try { localStorage.setItem(key, JSON.stringify(item)); } catch(e) { window._memStore = window._memStore || {}; window._memStore[key] = JSON.stringify(item); }
         }
 
         const collectionName = this.COLLECTIONS[key];
