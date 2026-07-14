@@ -1274,8 +1274,13 @@ const ui = {
     setTheme(theme) {
         const settings = Storage.getSettings();
         settings.theme = theme;
+        
+        // Salvar localmente e iniciar sincronização em background
         Storage.saveItem(Storage.KEYS.SETTINGS, settings);
+        
+        // Aplicar imediatamente
         this.applyTheme();
+        this.showToast(`Tema ${theme === 'dark' ? 'Escuro' : 'Claro'} aplicado`);
     },
 
     applyTheme() {
