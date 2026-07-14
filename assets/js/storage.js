@@ -8,7 +8,7 @@ import {
     query,
     where,
     writeBatch
-} from 'firebase/firestore';
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /**
  * Módulo de persistência de dados usando LocalStorage com sincronização Firebase
@@ -74,7 +74,8 @@ const Storage = {
                     this.KEYS.SERVICES,
                     this.KEYS.CATEGORIES,
                     this.KEYS.BUDGETS,
-                    this.KEYS.COUNTERS
+                    this.KEYS.COUNTERS,
+                    this.KEYS.USERS
                 ];
             }
 
